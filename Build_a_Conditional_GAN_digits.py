@@ -1,31 +1,6 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# # Build a Conditional GAN
-
-# ### Goals
-# In this notebook, you're going to make a conditional GAN in order to generate hand-written images of digits, conditioned on the digit to be generated (the class vector). This will let you choose what digit you want to generate.
-# 
-# You'll then do some exploration of the generated images to visualize what the noise and class vectors mean.  
-# 
-# ### Learning Objectives
-# 1.   Learn the technical difference between a conditional and unconditional GAN.
-# 2.   Understand the distinction between the class and noise vector in a conditional GAN.
-# 
-# 
-
-# ## Getting Started
-# 
-# For this assignment, you will be using the MNIST dataset again, but there's nothing stopping you from applying this generator code to produce images of animals conditioned on the species or pictures of faces conditioned on facial characteristics.
-# 
-# Note that this assignment requires no changes to the architectures of the generator or discriminator, only changes to the data passed to both. The generator will no longer take `z_dim` as an argument, but  `input_dim` instead, since you need to pass in both the noise and class vectors. In addition to good variable naming, this also means that you can use the generator and discriminator code you have previously written with different parameters.
-# 
-# You will begin by importing the necessary libraries and building the generator and discriminator.
 
 # #### Packages and Visualization
-
-# In[1]:
-
 
 import torch
 from torch import nn
@@ -123,8 +98,6 @@ def get_noise(n_samples, input_dim, device='cpu'):
 
 # #### Discriminator
 
-# In[3]:
-
 
 class Discriminator(nn.Module):
     '''
@@ -179,26 +152,6 @@ class Discriminator(nn.Module):
 # ## Class Input
 # 
 # In conditional GANs, the input vector for the generator will also need to include the class information. The class is represented using a one-hot encoded vector where its length is the number of classes and each index represents a class. The vector is all 0's and a 1 on the chosen class. Given the labels of multiple images (e.g. from a batch) and number of classes, please create one-hot vectors for each label. There is a class within the PyTorch functional library that can help you.
-# 
-# <details>
-# 
-# <summary>
-# <font size="3" color="green">
-# <b>Optional hints for <code><font size="4">get_one_hot_labels</font></code></b>
-# </font>
-# </summary>
-# 
-# 1.   This code can be done in one line.
-# 2.   The documentation for [F.one_hot](https://pytorch.org/docs/stable/nn.functional.html#torch.nn.functional.one_hot) may be helpful.
-# 
-# </details>
-# 
-
-# In[4]:
-
-
-# UNQ_C1 (UNIQUE CELL IDENTIFIER, DO NOT EDIT)
-# GRADED FUNCTION: get_one_hot_labels
 
 import torch.nn.functional as F
 def get_one_hot_labels(labels, n_classes):
@@ -208,50 +161,9 @@ def get_one_hot_labels(labels, n_classes):
         labels: tensor of labels from the dataloader, size (?)
         n_classes: the total number of classes in the dataset, an integer scalar
     '''
-    #### START CODE HERE ####
     return nn.functional.one_hot(labels, n_classes)
-    #### END CODE HERE ####
 
 
-# In[5]:
-
-
-assert (
-    get_one_hot_labels(
-        labels=torch.Tensor([[0, 2, 1]]).long(),
-        n_classes=3
-    ).tolist() == 
-    [[
-      [1, 0, 0], 
-      [0, 0, 1], 
-      [0, 1, 0]
-    ]]
-)
-print("Success!")
-
-
-# Next, you need to be able to concatenate the one-hot class vector to the noise vector before giving it to the generator. You will also need to do this when adding the class channels to the discriminator.
-# 
-# To do this, you will need to write a function that combines two vectors. Remember that you need to ensure that the vectors are the same type: floats. Again, you can look to the PyTorch library for help.
-# <details>
-# <summary>
-# <font size="3" color="green">
-# <b>Optional hints for <code><font size="4">combine_vectors</font></code></b>
-# </font>
-# </summary>
-# 
-# 1.   This code can also be written in one line.
-# 2.   The documentation for [torch.cat](https://pytorch.org/docs/master/generated/torch.cat.html) may be helpful.
-# 3.   Specifically, you might want to look at what the `dim` argument of `torch.cat` does.
-# 
-# </details>
-# 
-
-# In[14]:
-
-
-# UNQ_C2 (UNIQUE CELL IDENTIFIER, DO NOT EDIT)
-# GRADED FUNCTION: combine_vectors
 def combine_vectors(x, y):
     '''
     Function for combining two vectors with shapes (n_samples, ?) and (n_samples, ?).
@@ -263,44 +175,17 @@ def combine_vectors(x, y):
         Once again, in this assignment this will be the one-hot class vector 
         with the shape (n_samples, n_classes), but you shouldn't assume this in your code.
     '''
-    # Note: Make sure this function outputs a float no matter what inputs it receives
-    #### START CODE HERE ####
+    
     combined = torch.cat((x.float(),y.float()), dim =1)
-    #### END CODE HERE ####
+    
     return combined
 
 
-# In[15]:
-
-
-combined = combine_vectors(torch.tensor([[1, 2], [3, 4]]), torch.tensor([[5, 6], [7, 8]]));
-# Check exact order of elements
-assert torch.all(combined == torch.tensor([[1, 2, 5, 6], [3, 4, 7, 8]]))
-# Tests that items are of float type
-assert (type(combined[0][0].item()) == float)
-# Check shapes
-combined = combine_vectors(torch.randn(1, 4, 5), torch.randn(1, 8, 5));
-assert tuple(combined.shape) == (1, 12, 5)
-assert tuple(combine_vectors(torch.randn(1, 10, 12).long(), torch.randn(1, 20, 12).long()).shape) == (1, 30, 12)
-print("Success!")
-
-
 # ## Training
-# Now you can start to put it all together!
-# First, you will define some new parameters:
-# 
-# *   mnist_shape: the number of pixels in each MNIST image, which has dimensions 28 x 28 and one channel (because it's black-and-white) so 1 x 28 x 28
-# *   n_classes: the number of classes in MNIST (10, since there are the digits from 0 to 9)
-
-# In[16]:
-
 
 mnist_shape = (1, 28, 28)
 n_classes = 10
 
-
-# And you also include the same parameters from previous assignments:
-# 
 #   *   criterion: the loss function
 #   *   n_epochs: the number of times you iterate through the entire dataset when training
 #   *   z_dim: the dimension of the noise vector
@@ -309,9 +194,6 @@ n_classes = 10
 #   *   lr: the learning rate
 #   *   device: the device type
 # 
-
-# In[17]:
-
 
 criterion = nn.BCEWithLogitsLoss()
 n_epochs = 200
@@ -332,13 +214,6 @@ dataloader = DataLoader(
     shuffle=True)
 
 
-# Then, you can initialize your generator, discriminator, and optimizers. To do this, you will need to update the input dimensions for both models. For the generator, you will need to calculate the size of the input vector; recall that for conditional GANs, the generator's input is the noise vector concatenated with the class vector. For the discriminator, you need to add a channel for every class.
-
-# In[22]:
-
-
-# UNQ_C3 (UNIQUE CELL IDENTIFIER, DO NOT EDIT)
-# GRADED FUNCTION: get_input_dimensions
 def get_input_dimensions(z_dim, mnist_shape, n_classes):
     '''
     Function for getting the size of the conditional input dimensions 
@@ -354,25 +229,10 @@ def get_input_dimensions(z_dim, mnist_shape, n_classes):
         discriminator_im_chan: the number of input channels to the discriminator
                             (e.g. C x 28 x 28 for MNIST)
     '''
-    #### START CODE HERE ####
     generator_input_dim = z_dim + n_classes
     discriminator_im_chan = mnist_shape[0]+n_classes
-    #### END CODE HERE ####
+    
     return generator_input_dim, discriminator_im_chan
-
-
-# In[23]:
-
-
-def test_input_dims():
-    gen_dim, disc_dim = get_input_dimensions(23, (12, 23, 52), 9)
-    assert gen_dim == 32
-    assert disc_dim == 21
-test_input_dims()
-print("Success!")
-
-
-# In[24]:
 
 
 generator_input_dim, discriminator_im_chan = get_input_dimensions(z_dim, mnist_shape, n_classes)
@@ -394,18 +254,7 @@ disc = disc.apply(weights_init)
 
 # Now to train, you would like both your generator and your discriminator to know what class of image should be generated. There are a few locations where you will need to implement code.
 # 
-# For example, if you're generating a picture of the number "1", you would need to:
-#   
-# 1.   Tell that to the generator, so that it knows it should be generating a "1"
-# 2.   Tell that to the discriminator, so that it knows it should be looking at a "1". If the discriminator is told it should be looking at a 1 but sees something that's clearly an 8, it can guess that it's probably fake
-# 
-# There are no explicit unit tests here -- if this block of code runs and you don't change any of the other variables, then you've done it correctly!
 
-# In[25]:
-
-
-# UNQ_C4 (UNIQUE CELL IDENTIFIER, DO NOT EDIT)
-# GRADED CELL
 cur_step = 0
 generator_losses = []
 discriminator_losses = []
@@ -440,10 +289,9 @@ for epoch in range(n_epochs):
         # Steps: 1) Combine the noise vectors and the one-hot labels for the generator
         #        2) Generate the conditioned fake images
        
-        #### START CODE HERE ####
         noise_and_labels = combine_vectors(fake_noise, one_hot_labels)
         fake = gen(noise_and_labels)
-        #### END CODE HERE ####
+        
         
         # Make sure that enough images were generated
         assert len(fake) == len(real)
@@ -451,21 +299,13 @@ for epoch in range(n_epochs):
         assert tuple(noise_and_labels.shape) == (cur_batch_size, fake_noise.shape[1] + one_hot_labels.shape[1])
         # It comes from the correct generator
         assert tuple(fake.shape) == (len(real), 1, 28, 28)
-
-        # Now you can get the predictions from the discriminator
-        # Steps: 1) Create the input for the discriminator
-        #           a) Combine the fake images with image_one_hot_labels, 
-        #              remember to detach the generator (.detach()) so you do not backpropagate through it
-        #           b) Combine the real images with image_one_hot_labels
-        #        2) Get the discriminator's prediction on the fakes as disc_fake_pred
-        #        3) Get the discriminator's prediction on the reals as disc_real_pred
         
-        #### START CODE HERE ####
+        
         fake_image_and_labels = combine_vectors(fake, image_one_hot_labels)
         real_image_and_labels = combine_vectors(real, image_one_hot_labels)
         disc_fake_pred = disc(fake_image_and_labels)
         disc_real_pred = disc(real_image_and_labels)
-        #### END CODE HERE ####
+       
         
         # Make sure shapes are correct 
         assert tuple(fake_image_and_labels.shape) == (len(real), fake.detach().shape[1] + image_one_hot_labels.shape[1], 28 ,28)
@@ -488,7 +328,6 @@ for epoch in range(n_epochs):
         # Keep track of the average discriminator loss
         discriminator_losses += [disc_loss.item()]
 
-        ### Update generator ###
         # Zero out the generator gradients
         gen_opt.zero_grad()
 
@@ -499,7 +338,7 @@ for epoch in range(n_epochs):
         gen_loss.backward()
         gen_opt.step()
 
-        # Keep track of the generator losses
+        # track of the generator losses
         generator_losses += [gen_loss.item()]
         #
 
@@ -529,29 +368,12 @@ for epoch in range(n_epochs):
         cur_step += 1
 
 
-# ## Exploration
-# You can do a bit of exploration now!
 
-# In[ ]:
-
-
-# Before you explore, you should put the generator
-# in eval mode, both in general and so that batch norm
-# doesn't cause you issues and is using its eval statistics
 gen = gen.eval()
-
-
-# #### Changing the Class Vector
-# You can generate some numbers with your new model! You can add interpolation as well to make it more interesting.
-# 
-# So starting from a image, you will produce intermediate images that look more and more like the ending image until you get to the final image. Your're basically morphing one image into another. You can choose what these two images will be using your conditional GAN.
-
-# In[41]:
-
 
 import math
 
-### Change me! ###
+### Change me ###
 n_interpolation = 9 # Choose the interpolation: how many intermediate images you want + 2 (for the start and end image)
 interpolation_noise = get_noise(1, z_dim, device=device).repeat(n_interpolation, 1)
 
@@ -568,7 +390,7 @@ def interpolate_class(first_number, second_number):
     fake = gen(noise_and_labels)
     show_tensor_images(fake, num_images=n_interpolation, nrow=int(math.sqrt(n_interpolation)), show=False)
 
-### Change me! ###
+### Change me ###
 start_plot_number = 2 # Choose the start digit
 ### Change me! ###
 end_plot_number = 5 # Choose the end digit
@@ -579,7 +401,7 @@ _ = plt.axis('off')
 
 ### Uncomment the following lines of code if you would like to visualize a set of pairwise class 
 ### interpolations for a collection of different numbers, all in a single grid of interpolations.
-### You'll also see another visualization like this in the next code block!
+
 plot_numbers = [2, 3, 4, 5, 7]
 n_numbers = len(plot_numbers)
 plt.figure(figsize=(8, 8))
@@ -629,8 +451,6 @@ plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0.1, wspace=0)
 plt.show()
 plt.close()
 
-
-# In[ ]:
 
 
 
